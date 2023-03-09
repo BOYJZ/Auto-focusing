@@ -251,6 +251,115 @@ def noisy_gradient_ascent_v2( sheet1, sheet2,   sheet3, pos_init, learning_rate,
 
 
 
+'''
+ particle swarm intelligence code--------------------------------------------------------------------------------------
+'''
+def objective_function(x, label):
+    _perform_commands(sheet3, delta_x, delta_y, delta_z, step_size) # will move piezos in x or y or z 
+
+    for _ in range( wait_time): # used for time avg intensity
+        _perform_commands(sheet1 ) #saves intensity to file
+        intensity += _open_file(file) 
+        time.sleep(0.5)
+
+  _undo_move(sheet3, delta_x,delta_y,delta_z, step_size) # go back to original position 
+
+  grad_avg = (intensity_1 - intensity_2)/(wait_time * delta_pos) # avg of (f(x+h) - f(x))/h
+  print('grad_avg')
+  return intensity/wait_time
+
+
+def pso_algorithm(n_particles, n_iterations, objective_function, dim, xmin, xmax, w=0.7, c1=1.4, c2=1.4):
+    # initialize particles' positions and velocities
+    x = np.random.uniform(low=xmin, high=xmax, size=(n_particles, dim))
+    v = np.zeros_like(x)
+    # initialize particles' best positions and values
+    pbest = x.copy()
+    pbest_values = np.zeros(n_particles)
+    for i in range(n_particles):
+        pbest_values[i] = objective_function(pbest[i])
+    # initialize global best position and value
+    gbest = pbest[pbest_values.argmin()].copy()
+    gbest_value = pbest_values.min()
+    # initialize arrays to store center position and std of all particles' distribution
+    center_positions = np.zeros((n_iterations, dim))
+    stds = np.zeros(n_iterations)
+    # run PSO algorithm
+    for t in range(n_iterations):
+        # update velocities and positions of particles
+        v = w*v + c1*np.random.rand(n_particles, dim)*(pbest - x) + c2*np.random.rand(n_particles, dim)*(gbest - x)
+        x = x + v
+        # ensure particles stay within search space boundaries
+        x = np.clip(x, xmin, xmax)
+        # evaluate objective function at new positions
+        values = np.zeros(n_particles)
+        for i in range(n_particles):
+            values[i] = objective_function(x[i])
+        # update particles' best positions and values
+        for i in range(n_particles):
+            if values[i] < pbest_values[i]:
+                pbest[i] = x[i].copy()
+                pbest_values[i] = values[i]
+        # update global best position and value
+        if pbest_values.min() < gbest_value:
+            gbest = pbest[pbest_values.argmin()].copy()
+            gbest_value = pbest_values.min()
+        # store center position and std of all particles' distribution at current iteration
+        center_positions[t] = x.mean(axis=0)
+        stds[t] = x.std()
+    # return final center position and std of all particles' distribution
+    return center_positions[-1], stds[-1]
+'''
+sheet1 sheet2: excel sheets from cmd_v2
+pos_init: init position float  
+learning_rate: will dictate how fast gradient converges (float)
+wait_time: how many seconds of intensity avg (int)
+max_steps: number of max steps in grad ascent until it stops (int) 
+tolerance: tells grad when to stop (float)
+file: the file where intensity is being stored (string)
+step_size: the smallest step piezo can take (float)
+label: will tell whether grad ascent is wrt x or y or z (string)
+
+
+function does time averaged gradient ascent
+will stop if intensity changes less than the tolerance
+returns the path and the number of steps to reach convergence
+
+'''
+def pso( sheet1, sheet2,   sheet3, pos_init, radius, wait_time,  max_steps, tolerance, file,label, PSO_parameters):
+    num_particles=PSO_parameters[0]
+    iteration=int(max_steps/num_particles)
+    xmin=pos_init-radius
+    xmax=pos_init+radius
+    dim=1   #dimension
+    center_position,std=pso_algorithm(num_particles, iteration, objective_function, dim, xmin, xmax)
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
