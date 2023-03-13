@@ -22,7 +22,7 @@ tau_init = 100
 time_const = 8
 tau_iters = 100
 iters = 30
-tolerance = 1*10**3
+tolerance = 5*10**3
 optimeize_iter = 2
 
 learning_rate = 5*10**-7
@@ -94,6 +94,26 @@ elif key=='2':
                               step_size, wait_time, time_const,iters,tau_iters,file, tolerance, 'x')
       x_init = anneal_path_x[-1] 
       path_tot_x += anneal_path_x
+      
+      
+elif key=='3':
+    
+    lvi.mainWork(sheet1) #save current intensity to a file does not move piezos
+    for i in range(optimeize_iter): #will optimize z 'optimize_iter' number of times
+      anneal_path_z  = opt.pso( sheet1, sheet2, sheet3, z_init, z_range, tau_init,
+                              step_size, wait_time ,time_const,iters,tau_iters,file, tolerance, 'z')
+      z_init = anneal_path_z[-1] 
+      path_tot_z += anneal_path_z
 
+      if i < 1:
+        anneal_path_y = opt.pso( sheet1, sheet2, sheet3, y_init, y_range, tau_init,
+                                step_size, wait_time, time_const,iters,tau_iters,file, tolerance, 'y')
+        y_init = anneal_path_y[-1] 
+        path_tot_y += anneal_path_y
+
+        anneal_path_x = opt.pso( sheet1, sheet2, sheet3, x_init, x_range, tau_init,
+                                step_size, wait_time, time_const,iters,tau_iters,file, tolerance, 'x')
+        x_init = anneal_path_x[-1] 
+        path_tot_x += anneal_path_x
 
 
