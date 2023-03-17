@@ -7,7 +7,7 @@ pbounds = {'x': (-1, 1),'y': (-1, 1),'z': (-1, 1)}
 
 # Create the optimizer object
 
-time=5
+time=10
 iteration=100
 y=[]
 asnr=[1,10,100,1000]
@@ -30,14 +30,21 @@ for snr in asnr:
                 first=iter
                 break
         if iteration==first:
-            success_ratio=0
+                success_ratio=0
         else:
-            #cal the stability
+        #cal the stability
             success_time=0
-            for k in range(iteration-first):  
-                distance=np.sqrt(pos['x']**2+pos['y']**2+pos['z']**2)
-                if distance< 0.225:
-                    success_time+=1
+        #print(first)
+        for iter, res in enumerate(optimizer.res):
+            if iter<=first:
+                continue
+            pos=res['params']
+            distance=np.sqrt(pos['x']**2+pos['y']**2+pos['z']**2)
+            #print('iteration',iter)
+            #print(distance)
+            if distance< 0.225:
+                success_time+=1
+                #print('yes!')
             success_ratio=success_time/(iteration-first)
         if success_ratio>0.5:
             success+=1
