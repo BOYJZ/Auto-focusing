@@ -1,16 +1,17 @@
 import bayesian_optimization as bo #pip install bayesian-optimization, now local
 import numpy as np
 import matplotlib.pyplot as plt
-
+from bayes_opt import SequentialDomainReductionTransformer
 # Define the search space
-pbounds = {'x': (-1, 1),'y': (-1, 1),'z': (-1, 1)}
+pbounds = {'x': (0, 1),'y': (0, 1),'z': (0, 1)}
 
 # Create the optimizer object
 
-time=10
-iteration=100
+time=1
+iteration=200
 y=[]
-asnr=[1,10,100,1000]
+values=[]
+asnr=[10]
 for snr in asnr:
     success=0
     for j in range(time):
@@ -18,7 +19,8 @@ for snr in asnr:
           f = np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
           noisy_f =  f + np.random.normal(0, 1/SNR, f.shape)  
           return noisy_f
-        optimizer = bo.BayesianOptimization(f=noisy_gaussian, pbounds=pbounds, random_state=42)
+        bounds_transformer = SequentialDomainReductionTransformer(minimum_window=0.3)
+        optimizer = bo.BayesianOptimization(f=noisy_gaussian, pbounds=pbounds,bounds_transformer=bounds_transformer)
         success_time=0
         #cal first iteration
         first=iteration
@@ -42,9 +44,10 @@ for snr in asnr:
             distance=np.sqrt(pos['x']**2+pos['y']**2+pos['z']**2)
             #print('iteration',iter)
             #print(distance)
+            values.append(res['target'])
             if distance< 0.225:
                 success_time+=1
-                #print('yes!')
+                print(iter,'at this time, BO get inside the location bar')
             success_ratio=success_time/(iteration-first)
         if success_ratio>0.5:
             success+=1
@@ -55,4 +58,6 @@ plt.plot(asnr, y, marker='o',color='b')
 plt.title('pro of sucess v.s. snr')
 plt.xlabel('snr')
 plt.ylabel('pro of sucess')
+plt.show()
+plt.plot(values)
 plt.show()
