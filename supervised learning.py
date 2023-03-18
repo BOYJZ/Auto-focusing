@@ -50,8 +50,8 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
 ########################################################################################
 num_samples=10000
 num_points=1000
-lower_snr=1
-higher_snr=16
+lower_snr=0.5
+higher_snr=5
 SNR=10
 ########################################################################################
 
@@ -109,21 +109,21 @@ success=0
 x_snr=[]
 y_pro=[]
 total_number=[]
-for i in range(5):#split the snr into 15 parts, convert continuous snr to discrete snr
-    x_snr.append(1+i*3)
+for i in range(5):#split the snr into 5 parts, convert continuous snr to discrete snr
+    x_snr.append(lower_snr+(higher_snr-lower_snr)*i/4)
     y_pro.append(0)
     total_number.append(0)
 for i in range(len(y_pred)):
     distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
     tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
-    total_number[int( (tem_snr-1)/3 )]+=1
+    total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/4) )]+=1
     #print('distance',distance)
     #print('test',y_test[i])
     #print('prediction',y_pred[i])
     #print('#####################################################################')
     if distance < 0.225:
         success+=1
-        y_pro[int( (tem_snr-1)/3 )]+=1
+        y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/4) )]+=1
 for i in range(5):
     y_pro[i]=y_pro[i]/total_number[i]        
 print(success/len(y_pred))
