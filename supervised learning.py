@@ -48,10 +48,10 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
     return np.array(X), np.array(y), np.array(snr)
 
 ########################################################################################
-num_samples=1000
+num_samples=10000
 num_points=1000
 lower_snr=1
-higher_snr=15
+higher_snr=16
 SNR=10
 ########################################################################################
 
@@ -109,25 +109,28 @@ success=0
 x_snr=[]
 y_pro=[]
 total_number=[]
-for i in range(15):#split the snr into 15 parts, convert continuous snr to discrete snr
-    x_snr.append(i+1)
+for i in range(5):#split the snr into 15 parts, convert continuous snr to discrete snr
+    x_snr.append(1+i*3)
     y_pro.append(0)
     total_number.append(0)
 for i in range(len(y_pred)):
     distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
-    tem_snr=min(x_snr, key=lambda x: abs(x-snr[i]))
-    total_number[tem_snr]+=1
+    tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
+    total_number[int( (tem_snr-1)/3 )]+=1
     #print('distance',distance)
     #print('test',y_test[i])
     #print('prediction',y_pred[i])
     #print('#####################################################################')
     if distance < 0.225:
         success+=1
-        y_pro[tem_snr]+=1
-for i in range(15):
+        y_pro[int( (tem_snr-1)/3 )]+=1
+for i in range(5):
     y_pro[i]=y_pro[i]/total_number[i]        
 print(success/len(y_pred))
-plt.plot(y_pro,x_snr)
+print('discrete snr is',x_snr)
+print('#success in each snr is',y_pro)
+print('#total examples in each snr is',total_number)
+plt.plot(x_snr,y_pro)
 plt.xlabel('discrete snr')
 plt.ylabel('pro of success')
 plt.title('Success Probability vs SNR')
