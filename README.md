@@ -2,25 +2,25 @@
 Try to find the location of maximum in a noisy gaussian function
 
 
-Method1:  Traditional Gradient Descent---complete
+Method1:  Traditional Gradient Descent---complete---see gradient search.py
 
 
-Method2:  PSO---complete
+Method2:  PSO---complete---see PSO.py
 
 
-Method3:  Genetic PSO---complete
+Method3:  Genetic PSO---complete---see PSO_optimised.py
 
 
-Method4:  Gradient-like PSO---complete
+Method4:  Gradient-like PSO---complete---see PSO_gradient.py
 
 
-Method5:  Bayesian Optimisation(code from bayesian_opt library)---complete
+Method5:  Bayesian Optimisation(code from bayesian_opt library)---complete---see folder bayes_opt, run gaussian.py
 
 
-Method6:  Random Forests---incorrect version & complete---a try on supervised learning
+Method6:  Random Forests---incorrect version & complete---a try on supervised learning---see Ensemble method.py
 
 
-Method7:  CNN---working on
+Method7:  CNN---working on---see CNN.py
 
 
 
