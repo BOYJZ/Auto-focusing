@@ -3,10 +3,7 @@ import random
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
 
-def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z):
-  A=random.randint(3000, 493000)
-  B=7000
-  C=7000
+def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C):
   f = A*np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
   noisy_f =  f + (A + B) * np.random.normal(0, 1/SNR, f.shape) + C
   return noisy_f
@@ -23,6 +20,9 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
     y = np.zeros((num_samples, 3))
     snr=[]
     for i in range(num_samples):
+        A=random.randint(3000, 493000)
+        B=random.randint(300,7000)
+        C=B
         SNR = np.random.uniform(lower_snr, higher_snr)
         #maximum location
         mu_x = np.random.uniform(-1, 1)
@@ -44,14 +44,16 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
 
         values=[]
         for k in range(num_points):
-            values.append(noisy_gaussian(points[k][0], points[k][1], points[k][2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z))
-        X[i] = np.array(values).T
+            values.append(noisy_gaussian(points[k][0], points[k][1], points[k][2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C))
+        max_value=max(values)
+        normalized_values = [x / max_value for x in values]
+        X[i] = np.array(normalized_values).T
         y[i] = np.array([mu_x, mu_y, mu_z])
         snr.append(SNR)
     return np.array(X), np.array(y), np.array(snr)
 
 ########################################################################################
-num_samples=10
+num_samples=10000
 num_points=1000
 lower_snr=0.1
 higher_snr=100
@@ -116,14 +118,14 @@ model.fit(X_train_input, y_train, epochs=10)
 
 
 lower_snr,higher_snr=1,100
-X_test, y_test,snr = generate_dataset(100,num_points,lower_snr,higher_snr)
+X_test, y_test,snr = generate_dataset(10000,num_points,lower_snr,higher_snr)
 #prediction
 y_pred = model.predict(X_test)
 success=0
 x_snr=[]
 y_pro=[]
 total_number=[]
-num_parts=5
+num_parts=50
 for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
     x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
     y_pro.append(0)
@@ -133,7 +135,7 @@ for i in range(len(y_pred)):
     tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
     #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
     total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
-    print('distance',distance)
+    #print('distance',distance)
     #print('test',y_test[i])
     #print('prediction',y_pred[i])
     #print('#####################################################################')
