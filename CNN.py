@@ -1,11 +1,14 @@
 import numpy as np
+import random
 from tensorflow.keras import layers, models
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z):
-  f = np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
-  noisy_f =  f + np.random.normal(0, 1/SNR, f.shape)  
+  A=random.randint(3000, 493000)
+  B=7000
+  C=7000
+  f = A*np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
+  noisy_f =  f + (A + B) * np.random.normal(0, 1/SNR, f.shape) + C
   return noisy_f
 
 '''
@@ -48,19 +51,15 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
     return np.array(X), np.array(y), np.array(snr)
 
 ########################################################################################
-num_samples=10000
+num_samples=10
 num_points=1000
-lower_snr=0.5
-higher_snr=5
+lower_snr=0.1
+higher_snr=100
 SNR=10
 ########################################################################################
 
 # Generate the dataset
-X, y,snr = generate_dataset(num_samples,num_points,lower_snr,higher_snr)
-
-
-# Split the dataset into training and testing sets
-X_train, X_test, y_train, y_test, snr_train, snr_test = train_test_split(X, y, snr, test_size=0.2, random_state=42)
+X_train, y_train,snr_train = generate_dataset(num_samples,num_points,lower_snr,higher_snr)
 
 # Reshape the input data to match the expected input shape of the model
 X_train_input = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
@@ -103,28 +102,45 @@ model.compile(optimizer='Nadam', loss='mean_squared_error', metrics=['mean_absol
 #fit the model
 model.fit(X_train_input, y_train, epochs=10)
 
+#save the model
+#model.save('my_model.h5')
+
+#how to load model?
+#from keras.models import load_model
+#model = load_model('my_model.h5')
+
+
+#x=[1,1,1,1,1,1]
+#padded_x = np.pad(x, (0, num_points-len(x)), 'constant', constant_values=0)
+
+
+
+lower_snr,higher_snr=1,100
+X_test, y_test,snr = generate_dataset(100,num_points,lower_snr,higher_snr)
 #prediction
 y_pred = model.predict(X_test)
 success=0
 x_snr=[]
 y_pro=[]
 total_number=[]
-for i in range(5):#split the snr into 5 parts, convert continuous snr to discrete snr
-    x_snr.append(lower_snr+(higher_snr-lower_snr)*i/4)
+num_parts=5
+for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
+    x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
     y_pro.append(0)
     total_number.append(0)
 for i in range(len(y_pred)):
     distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
     tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
-    total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/4) )]+=1
-    #print('distance',distance)
+    #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
+    total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+    print('distance',distance)
     #print('test',y_test[i])
     #print('prediction',y_pred[i])
     #print('#####################################################################')
     if distance < 0.225:
         success+=1
-        y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/4) )]+=1
-for i in range(5):
+        y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+for i in range(num_parts):
     y_pro[i]=y_pro[i]/total_number[i]        
 print(success/len(y_pred))
 print('discrete snr is',x_snr)
