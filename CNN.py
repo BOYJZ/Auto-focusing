@@ -1,5 +1,4 @@
 import numpy as np
-import random
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
 
@@ -14,24 +13,22 @@ num_points: number of points in each samples
 [lower_snr,higher_snr]: range of SNR of each samples
 '''
 def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
-    X = []
-    for i in range(num_samples):
-        X.append(0)
+    X = np.zeros((num_samples, num_points))
     y = np.zeros((num_samples, 3))
     snr=[]
     for i in range(num_samples):
-        A=random.randint(3000, 493000)
-        B=random.randint(300,7000)
+        A=np.random.randint(3000, 493000)
+        B=np.random.randint(300,7000)
         C=B
         SNR = np.random.uniform(lower_snr, higher_snr)
         #maximum location
         mu_x = np.random.uniform(-1, 1)
         mu_y = np.random.uniform(-1, 1)
         mu_z = np.random.uniform(-1, 1)
-        #sigma_x = np.random.uniform(0.5, 2)
-        #sigma_y = np.random.uniform(0.5, 2)
-        #sigma_z = np.random.uniform(0.5, 2)
-        sigma_x,sigma_y,sigma_z=1,1,1
+        sigma_x = np.random.uniform(0.5, 2)
+        sigma_y = np.random.uniform(0.5, 2)
+        sigma_z = np.random.uniform(0.5, 2)
+        #sigma_x,sigma_y,sigma_z=1,1,1
 
         points_per_dim = int(np.ceil(num_points**(1/3.)))
 
@@ -43,8 +40,7 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
         points = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])[:num_points]
 
         values=[]
-        for k in range(num_points):
-            values.append(noisy_gaussian(points[k][0], points[k][1], points[k][2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C))
+        values = noisy_gaussian(points[:,0], points[:,1], points[:,2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C)
         max_value=max(values)
         normalized_values = [x / max_value for x in values]
         X[i] = np.array(normalized_values).T
@@ -53,7 +49,7 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
     return np.array(X), np.array(y), np.array(snr)
 
 ########################################################################################
-num_samples=10000
+num_samples=1000
 num_points=1000
 lower_snr=0.1
 higher_snr=100
@@ -105,7 +101,7 @@ model.compile(optimizer='Nadam', loss='mean_squared_error', metrics=['mean_absol
 model.fit(X_train_input, y_train, epochs=10)
 
 #save the model
-#model.save('my_model.h5')
+model.save('my_model.h5')
 
 #how to load model?
 #from keras.models import load_model
