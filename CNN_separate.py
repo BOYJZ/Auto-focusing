@@ -91,12 +91,12 @@ def re_measure(snr,maximum_location,array_A,array_B,measure_center):
     return np.array(X)
 
 ########################################################################################
-num_samples=1000
+num_samples=10000
 num_points=200
 lower_snr=0.1
 higher_snr=100
 measurements=1000
-num_test=100
+num_test=1000
 ########################################################################################
 
 # Generate the dataset
@@ -168,7 +168,7 @@ success=0
 x_snr=[]
 y_pro=[]
 total_number=[]
-num_parts=5
+num_parts=50
 for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
     x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
     y_pro.append(0)
