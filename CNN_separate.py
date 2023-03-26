@@ -84,18 +84,57 @@ def re_measure(snr,maximum_location,array_A,array_B,measure_center):
         points = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])[:num_points]
 
         values=[]
+        #print('x',points[:,0])
+        #print('y,z', points[:,1], points[:,2])
         values = noisy_gaussian(points[:,0], points[:,1], points[:,2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C)
         max_value=max(values)
         normalized_values = [x / max_value for x in values]
         X[i] = np.array(normalized_values).T
     return np.array(X)
 
+def assessment():    
+    success=0
+    x_snr=[]
+    y_pro=[]
+    total_number=[]
+    num_parts=10
+    lower_snr=1
+    higher_snr=10
+    for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
+        x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
+        y_pro.append(0)
+        total_number.append(0)
+    for i in range(len(y_pred)):
+        distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
+        tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
+        #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
+        total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+        #print('distance',distance)
+        #print('test',y_test[i])
+        #print('prediction',y_pred[i])
+        #print('#####################################################################')
+        if distance < 0.225:
+            success+=1
+            y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+    for i in range(num_parts):
+        y_pro[i]=y_pro[i]/total_number[i]        
+    print(success/len(y_pred))
+    print('discrete snr is',x_snr)
+    print('#success in each snr is',y_pro)
+    print('#total examples in each snr is',total_number)
+    print('#############################################################################')
+    plt.plot(x_snr,y_pro)
+    plt.xlabel('discrete snr')
+    plt.ylabel('pro of success')
+    plt.title('Success Probability vs SNR')
+    plt.show()
+    return
 ########################################################################################
 num_samples=10000
 num_points=200
-lower_snr=0.1
+lower_snr=1
 higher_snr=100
-measurements=1000
+measurements=200
 num_test=1000
 ########################################################################################
 
@@ -151,50 +190,19 @@ model.save('my_model.h5')
 #model = load_model('my_model.h5')
 
 
-lower_snr,higher_snr=1,100
 X_test, y_test,snr,  array_A, array_B = generate_dataset(num_test,num_points,lower_snr,higher_snr)
 
 y_pred = model.predict(X_test)
+assessment()
 loop_time=int(measurements/num_points)-1
 for i in range(loop_time):
     X_test = re_measure(snr, y_test ,array_A,array_B, measure_center=y_pred)
 
     #prediction
     y_pred = model.predict(X_test)
+    assessment()
     
-    
-    
-success=0
-x_snr=[]
-y_pro=[]
-total_number=[]
-num_parts=50
-for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
-    x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
-    y_pro.append(0)
-    total_number.append(0)
-for i in range(len(y_pred)):
-    distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
-    tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
-    #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
-    total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
-    #print('distance',distance)
-    #print('test',y_test[i])
-    #print('prediction',y_pred[i])
-    #print('#####################################################################')
-    if distance < 0.225:
-        success+=1
-        y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
-for i in range(num_parts):
-    y_pro[i]=y_pro[i]/total_number[i]        
-print(success/len(y_pred))
-print('discrete snr is',x_snr)
-print('#success in each snr is',y_pro)
-print('#total examples in each snr is',total_number)
-plt.plot(x_snr,y_pro)
-plt.xlabel('discrete snr')
-plt.ylabel('pro of success')
-plt.title('Success Probability vs SNR')
+
 
 
 
