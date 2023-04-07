@@ -1,6 +1,7 @@
 import numpy as np
 from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
+import random
 
 def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C):
   f = A*np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
@@ -10,25 +11,33 @@ def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B
 '''
 num_samples: number of samples
 num_points: number of points in each samples
-[lower_snr,higher_snr]: range of SNR of each samples
+    [lower_snr,higher_snr]: range of SNR of each samples
+center: detect center
+input_snr, input_location: for the 4 last experiments, use same snr and location as first generation
 '''
 def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
     X = np.zeros((num_samples, num_points))
     y = np.zeros((num_samples, 3))
+    array_A=[]
+    array_B=[]
     snr=[]
     for i in range(num_samples):
         A=np.random.randint(3000, 493000)
         B=np.random.randint(300,7000)
         C=B
-        SNR = np.random.uniform(lower_snr, higher_snr)
+        
+        #SNR = np.random.uniform(lower_snr, higher_snr)
+        SNR = abs(np.random.normal(0, std_dev))
+
         #maximum location
         mu_x = np.random.uniform(-1, 1)
         mu_y = np.random.uniform(-1, 1)
         mu_z = np.random.uniform(-1, 1)
-        sigma_x = np.random.uniform(0.5, 2)
-        sigma_y = np.random.uniform(0.5, 2)
-        sigma_z = np.random.uniform(0.5, 2)
-        #sigma_x,sigma_y,sigma_z=1,1,1
+        
+        #sigma_x = np.random.uniform(0.5, 2)
+        #sigma_y = np.random.uniform(0.5, 2)
+        #sigma_z = np.random.uniform(0.5, 2)
+        sigma_x,sigma_y,sigma_z=1,1,1
 
         points_per_dim = int(np.ceil(num_points**(1/3.)))
 
@@ -45,19 +54,113 @@ def generate_dataset(num_samples,num_points,lower_snr,higher_snr):
         normalized_values = [x / max_value for x in values]
         X[i] = np.array(normalized_values).T
         y[i] = np.array([mu_x, mu_y, mu_z])
+        
+        #save
+        array_A.append(A)
+        array_B.append(B)
         snr.append(SNR)
-    return np.array(X), np.array(y), np.array(snr)
+    return np.array(X), np.array(y), np.array(snr), array_A, array_B
+
+def generate_dataset_with_set_snr(num_samples,num_points,snr):
+    X = np.zeros((num_samples, num_points))
+    y = np.zeros((num_samples, 3))
+
+    for i in range(num_samples):
+        A=np.random.randint(3000, 493000)
+        B=np.random.randint(300,7000)
+        C=B
+        
+        SNR = snr
+
+        #maximum location
+        mu_x = np.random.uniform(-1, 1)
+        mu_y = np.random.uniform(-1, 1)
+        mu_z = np.random.uniform(-1, 1)
+        
+        sigma_x,sigma_y,sigma_z=1,1,1
+
+        points_per_dim = int(np.ceil(num_points**(1/3.)))
+
+        dx = np.linspace(-1, 1, points_per_dim)
+        dy = np.linspace(-1, 1, points_per_dim)
+        dz = np.linspace(-1, 1, points_per_dim)
+
+        xx, yy, zz = np.meshgrid(dx, dy, dz)
+        points = np.column_stack([xx.ravel(), yy.ravel(), zz.ravel()])[:num_points]
+
+        values=[]
+        values = noisy_gaussian(points[:,0], points[:,1], points[:,2], SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C)
+        max_value=max(values)
+        normalized_values = [x / max_value for x in values]
+        X[i] = np.array(normalized_values).T
+        y[i] = np.array([mu_x, mu_y, mu_z])
+        
+    return np.array(X), np.array(y)
+
+def draw_pro_snr():    
+    success=0
+    x_snr=[]
+    y_pro=[]
+    total_number=[]
+    num_parts=50
+    for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
+        x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
+        y_pro.append(0)
+        total_number.append(0)
+    for i in range(len(y_pred)):
+        distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
+        tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
+        #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
+        total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+        #print('distance',distance)
+        #print('test',y_test[i])
+        #print('prediction',y_pred[i])
+        #print('#####################################################################')
+        if distance < 0.225:
+            success+=1
+            y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
+    for i in range(num_parts):
+        if total_number[i]==0:
+            continue
+        y_pro[i]=y_pro[i]/total_number[i]        
+    print(success/len(y_pred))
+    print('discrete snr is',x_snr)
+    print('#success in each snr is',y_pro)
+    print('#total examples in each snr is',total_number)
+    print('#############################################################################')
+    plt.plot(x_snr,y_pro)
+    plt.xlabel('discrete snr')
+    plt.ylabel('pro of success')
+    plt.title('Success Probability vs SNR')
+    plt.show()
+    return
+
+def mask(x, num_points_to_add):
+    masked=[]
+    for i in range(len(x)):
+        masked.append(0)
+    selected_indices=[]
+    for j in range(num_points_to_add):
+        selected_indices.append(int(j/num_points_to_add*len(x)))
+
+    for j in range(len(selected_indices)):
+        masked[selected_indices[j]] = x[ selected_indices[j]]
+
+    return masked
+
 
 ########################################################################################
-num_samples=1000
-num_points=1000
-lower_snr=0.1
+num_samples=10000
+num_points=200
+lower_snr=1
 higher_snr=100
-SNR=10
+std_dev = 20
+measurements=200
+num_test=10
 ########################################################################################
 
 # Generate the dataset
-X_train, y_train,snr_train = generate_dataset(num_samples,num_points,lower_snr,higher_snr)
+X_train, y_train,snr_train,array_A_train,array_B_train = generate_dataset(num_samples,num_points,lower_snr,higher_snr)
 
 # Reshape the input data to match the expected input shape of the model
 X_train_input = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
@@ -69,7 +172,7 @@ input_shape = (num_points, 1)
 model = models.Sequential()
 
 # Add the convolutional layers
-model.add(layers.Conv1D(filters=32, kernel_size=3, activation='relu', input_shape=input_shape))
+model.add(layers.Conv1D(filters=32, kernel_size=3, activation='linear', input_shape=input_shape))
 model.add(layers.MaxPooling1D(pool_size=2))
 model.add(layers.Conv1D(filters=64, kernel_size=3, activation='relu'))
 model.add(layers.MaxPooling1D(pool_size=2))
@@ -86,16 +189,16 @@ model.add(layers.MaxPooling1D(pool_size=2))
 model.add(layers.Flatten())
 
 # Add the dense layers with dropout
-model.add(layers.Dense(512, activation='relu'))
+model.add(layers.Dense(512, activation='linear'))
 #model.add(layers.Dropout(0.5))
-model.add(layers.Dense(256, activation='relu'))
+model.add(layers.Dense(256, activation='linear'))
 #model.add(layers.Dropout(0.5))
-model.add(layers.Dense(128, activation='relu'))
+model.add(layers.Dense(128, activation='linear'))
 #model.add(layers.Dropout(0.5))
 model.add(layers.Dense(3, activation='linear'))
 
 # Compile the model
-model.compile(optimizer='Nadam', loss='mean_squared_error', metrics=['mean_absolute_error'])
+model.compile(optimizer='Adam', loss='MSE', metrics=['mean_absolute_error'])
 
 #fit the model
 model.fit(X_train_input, y_train, epochs=10)
@@ -107,47 +210,51 @@ model.save('my_model.h5')
 #from keras.models import load_model
 #model = load_model('my_model.h5')
 
+lower_snr=1
+higher_snr=100
+X_test, y_test,snr,  array_A, array_B = generate_dataset(num_test,num_points,lower_snr,higher_snr)
 
-#x=[1,1,1,1,1,1]
-#padded_x = np.pad(x, (0, num_points-len(x)), 'constant', constant_values=0)
-
-
-
-lower_snr,higher_snr=1,100
-X_test, y_test,snr = generate_dataset(10000,num_points,lower_snr,higher_snr)
-#prediction
 y_pred = model.predict(X_test)
-success=0
-x_snr=[]
-y_pro=[]
-total_number=[]
-num_parts=50
-for i in range(num_parts):#split the snr into 5 parts, convert continuous snr to discrete snr
-    x_snr.append(lower_snr+(higher_snr-lower_snr)*i/(num_parts-1))
-    y_pro.append(0)
-    total_number.append(0)
-for i in range(len(y_pred)):
-    distance = np.sqrt(  (y_pred[i][0]-y_test[i][0])**2 + (y_pred[i][1]-y_test[i][1])**2 + (y_pred[i][2]-y_test[i][2])**2  )
-    tem_snr = min(x_snr, key=lambda x: abs(x-snr[i]))
-    #print(int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) ))
-    total_number[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
-    #print('distance',distance)
-    #print('test',y_test[i])
-    #print('prediction',y_pred[i])
-    #print('#####################################################################')
-    if distance < 0.225:
-        success+=1
-        y_pro[int( (tem_snr-lower_snr) / ((higher_snr-lower_snr)/(num_parts-1)) )]+=1
-for i in range(num_parts):
-    y_pro[i]=y_pro[i]/total_number[i]        
-print(success/len(y_pred))
-print('discrete snr is',x_snr)
-print('#success in each snr is',y_pro)
-print('#total examples in each snr is',total_number)
-plt.plot(x_snr,y_pro)
-plt.xlabel('discrete snr')
-plt.ylabel('pro of success')
-plt.title('Success Probability vs SNR')
+
+
+#draw_pro_snr()
+
+def draw_meas_snr():
+    x_snr = list(range(1, 101, 10))
+    #x_snr=[100]
+    y=[]
+    X_mask=[]
+    signal=0
+    num_test=100
+    for snr in x_snr:
+        X_test,y_test=generate_dataset_with_set_snr(num_test,num_points,snr)
+        success=0
+        X_mask=[]
+        step=10
+        total=int(200/step)
+        for i in range(len(X_test)):
+            for j in range(1,num_points,step):
+                masked=mask(X_test[i],j)
+                signal+=1
+                X_mask.append(masked)
+        y_pred=model.predict(X_mask)
+        for k in range(len(X_test)):
+            tem=num_points
+            for i in range(total):
+                index=k*total+i
+                distance = np.sqrt(  (y_pred[index][0]-y_test[k][0])**2 + (y_pred[index][1]-y_test[k][1])**2 + (y_pred[index][2]-y_test[k][2])**2  )
+                if distance < 0.225:
+                    tem=i/total*num_points
+                    break
+            success+=tem
+        success/=len(X_test)
+        y.append(success)
+    print(signal)
+    print(x_snr,y)
+    plt.plot(x_snr,y)
+
+
+draw_meas_snr()
 
 
 
