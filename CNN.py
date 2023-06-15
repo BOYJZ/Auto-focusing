@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C):
   f = np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2)+ (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
-  noisy_f =  A * f + A * np.random.normal(0, (1/SNR), f.shape) 
+  noisy_f =  A * f + A * np.random.normal(0, (1/SNR), f.shape) + C
   return noisy_f
 
 '''
@@ -144,13 +144,14 @@ def generate_dataset_with_set_snr(num_samples,num_points,snr):
 
 
 ########################################################################################
-num_samples=100000
-num_points=200
+num_samples=1000000
+num_points=1000
 lower_snr=1
 higher_snr=100
 std_dev = 35
 measurements=200
 num_test=10000
+train_epochs=5
 ########################################################################################
 
 # Generate the dataset
@@ -162,40 +163,21 @@ X_train_input = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
 # Define the input shape
 input_shape = (num_points, 1)
 
-# Define the model architecture
 model = models.Sequential()
-
-# Add the convolutional layers
-model.add(layers.Conv1D(filters=32, kernel_size=3, activation='linear', input_shape=input_shape))
+model.add(layers.Conv1D(6, (5,), activation='relu', input_shape=(num_points, 1)))
 model.add(layers.MaxPooling1D(pool_size=2))
-model.add(layers.Conv1D(filters=64, kernel_size=3, activation='relu'))
+model.add(layers.Conv1D(16, (5,), activation='relu'))
 model.add(layers.MaxPooling1D(pool_size=2))
-model.add(layers.Conv1D(filters=128, kernel_size=3, activation='relu'))
-model.add(layers.MaxPooling1D(pool_size=2))
-model.add(layers.Conv1D(filters=256, kernel_size=3, activation='relu'))
-model.add(layers.MaxPooling1D(pool_size=2))
-model.add(layers.Conv1D(filters=512, kernel_size=3, activation='relu'))
-model.add(layers.MaxPooling1D(pool_size=2))
-model.add(layers.Conv1D(filters=1024, kernel_size=3, activation='relu'))
-model.add(layers.MaxPooling1D(pool_size=2))
-
-# Flatten the output of the convolutional layers
 model.add(layers.Flatten())
-
-# Add the dense layers with dropout
-model.add(layers.Dense(512, activation='linear'))
-#model.add(layers.Dropout(0.5))
-model.add(layers.Dense(256, activation='linear'))
-#model.add(layers.Dropout(0.5))
-model.add(layers.Dense(128, activation='linear'))
-#model.add(layers.Dropout(0.5))
-model.add(layers.Dense(3, activation='linear'))
+model.add(layers.Dense(120, activation='relu'))
+model.add(layers.Dense(84, activation='relu'))
+model.add(layers.Dense(3, activation='linear'))  # regression task
 
 # Compile the model
 model.compile(optimizer='Adam', loss='MSE', metrics=['mean_absolute_error'])
 
 #fit the model
-model.fit(X_train_input, y_train, epochs=10)
+model.fit(X_train_input, y_train, epochs=train_epochs)
 
 #save the model
 model.save('my_model.h5')
@@ -261,7 +243,8 @@ def draw_pro_snr():
 
 
 def draw_meas_snr():
-    x_snr = list(range(5, 100, 10))
+    x_snr=[1.0, 3.020408163265306, 5.040816326530612, 7.061224489795919, 9.081632653061224, 11.10204081632653, 13.122448979591837, 15.142857142857142, 17.163265306122447, 19.183673469387756, 21.20408163265306, 23.224489795918366, 25.244897959183675, 27.26530612244898, 29.285714285714285, 31.306122448979593, 33.326530612244895, 35.3469387755102, 37.36734693877551, 39.38775510204081, 41.40816326530612, 43.42857142857143, 45.44897959183673, 47.46938775510204, 49.48979591836735, 51.51020408163265, 53.53061224489796, 55.55102040816327, 57.57142857142857, 59.59183673469388, 61.61224489795919, 63.63265306122449, 65.65306122448979, 67.6734693877551, 69.6938775510204, 71.71428571428571, 73.73469387755102, 75.75510204081633, 77.77551020408163, 79.79591836734694, 81.81632653061224, 83.83673469387755, 85.85714285714286, 87.87755102040816, 89.89795918367346, 91.91836734693878, 93.93877551020408, 95.95918367346938, 97.9795918367347, 100.0]
+    
     #x_snr=[100]
     y=[]
     X_mask=[]
@@ -298,7 +281,7 @@ def draw_meas_snr():
     plt.show()
 
 draw_pro_snr()
-draw_meas_snr()
+#draw_meas_snr()
 
 
 
