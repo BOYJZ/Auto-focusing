@@ -1,0 +1,103 @@
+import numpy as np
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+
+def noisy_gaussian(x, y, z, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C):
+  f = np.exp(-((x - mu_x) ** 2 / (2 * sigma_x ** 2) + (y - mu_y) ** 2 / (2 * sigma_y ** 2) + (z - mu_z) ** 2 / (2 * sigma_z ** 2)))
+  noisy_f = A * f + A * np.random.normal(0, (1/SNR), f.shape) + C
+  return noisy_f
+
+def generate_dataset(num_samples, points_per_dim, lower_snr, higher_snr):
+    X = np.zeros((num_samples, points_per_dim, points_per_dim, points_per_dim, 1))
+    y = np.zeros((num_samples, 3))
+
+    for i in range(num_samples):
+        A=np.random.randint(3000, 493000)
+        B=np.random.randint(300,7000)
+        C=B
+        SNR = np.random.uniform(lower_snr, higher_snr)
+        mu_x = np.random.uniform(-1, 1)
+        mu_y = np.random.uniform(-1, 1)
+        mu_z = np.random.uniform(-1, 1)
+        sigma_x,sigma_y,sigma_z=1,1,1
+        dx = np.linspace(-1, 1, points_per_dim)
+        dy = np.linspace(-1, 1, points_per_dim)
+        dz = np.linspace(-1, 1, points_per_dim)
+        xx, yy, zz = np.meshgrid(dx, dy, dz)
+        values = noisy_gaussian(xx, yy, zz, SNR, mu_x, mu_y, mu_z, sigma_x, sigma_y, sigma_z,A,B,C)
+        max_value = values.max()
+        values /= max_value
+        X[i] = values.reshape(points_per_dim, points_per_dim, points_per_dim, 1)
+        y[i] = np.array([mu_x, mu_y, mu_z])
+
+    return X, y
+
+# Set parameters
+num_samples = 1000000
+points_per_dim = 10
+lower_snr = 1
+higher_snr = 100
+train_epochs = 3
+
+# Generate the dataset
+X_train, y_train = generate_dataset(num_samples, points_per_dim, lower_snr, higher_snr)
+
+# Define the model
+input_shape = (points_per_dim, points_per_dim, points_per_dim, 1)
+
+model = models.Sequential()
+model.add(layers.Conv3D(32, (3,3,3), activation='relu', input_shape=input_shape))
+model.add(layers.MaxPooling3D(pool_size=(2, 2, 2)))
+model.add(layers.Conv3D(64, (3,3,3), activation='relu'))
+model.add(layers.MaxPooling3D(pool_size=(2, 2, 2)))
+model.add(layers.Flatten())
+model.add(layers.Dense(120, activation='relu'))
+model.add(layers.Dense(84, activation='relu'))
+model.add(layers.Dense(3, activation='linear'))  # regression task
+
+# Compile the model
+model.compile(optimizer='Adam', loss='MSE', metrics=['mean_absolute_error'])
+
+# Fit the model
+model.fit(X_train, y_train, epochs=train_epochs)
+
+# Save the model
+model.save('3D_CNN_model.h5')
+
+# from tensorflow.keras.models import load_model
+# model = load_model('3D_CNN_model.h5')
+
+def test_model_snr(num_test_samples, points_per_dim, snrs):
+    success_rates = []
+    for snr in snrs:
+        X_test, y_test = generate_dataset(num_test_samples, points_per_dim, snr, snr)
+        y_pred = model.predict(X_test)
+
+        # Compute the Euclidean distance between predicted and actual points
+        distances = np.linalg.norm(y_pred - y_test, axis=1)
+
+        # Count how many predictions are close to the actual point (threshold distance 0.225)
+        num_success = (distances < 0.225).sum()
+        success_rate = num_success / num_test_samples
+        success_rates.append(success_rate)
+
+        print(f'Success rate for SNR={snr}: {success_rate}')
+
+    return success_rates
+
+lower_snr = 1
+higher_snr = 10
+
+# Define SNRs for testing
+snrs = np.linspace(lower_snr, higher_snr, 10)
+
+# Test the model for different SNRs
+success_rates = test_model_snr(1000, points_per_dim, snrs)
+
+# Plot success rates
+plt.plot(snrs, success_rates, marker='o')
+plt.title('Success rate vs SNR')
+plt.xlabel('SNR')
+plt.ylabel('Success rate')
+plt.grid(True)
+plt.show()
